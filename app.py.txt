@@ -1,0 +1,65 @@
+import streamlit as st
+import google.generativeai as genai
+import os
+import importlib.metadata
+
+# --- CONFIGURATION ---
+st.set_page_config(page_title="Gemini Debugger", page_icon="🛠")
+st.title("🛠 Gemini Server Debugger")
+
+# Load Secrets
+try:
+    api_key = st.secrets["GOOGLE_API_KEY"]
+    genai.configure(api_key=api_key)
+    st.success("✅ API Key loaded from Secrets")
+except Exception as e:
+    st.error(f"❌ API Key missing: {e}")
+    st.stop()
+
+# --- 1. CHECK LIBRARY VERSION ---
+try:
+    lib_version = importlib.metadata.version("google-generativeai")
+    st.write(f"**Google Library Version:** `{lib_version}`")
+    
+    if lib_version < "0.7.0":
+        st.error("❌ Library is TOO OLD. Please update requirements.txt to `google-generativeai>=0.7.0` and Reboot App.")
+    else:
+        st.success("✅ Library version is good.")
+except:
+    st.warning("Could not detect library version.")
+
+# --- 2. ASK GOOGLE FOR AVAILABLE MODELS ---
+st.subheader("Available Models on this Server")
+st.write("Asking Google API what models are permitted for this IP address...")
+
+try:
+    available_models = []
+    # We iterate through all models the key can access
+    for m in genai.list_models():
+        if 'generateContent' in m.supported_generation_methods:
+            available_models.append(m.name)
+            st.code(m.name) # Print each model found
+            
+    if not available_models:
+        st.error("❌ RESULT: The Google API returned an EMPTY list.")
+        st.warning("""
+        **Diagnosis:** Google is likely blocking requests from this Streamlit Cloud server IP address.
+        
+        **Solution:** You cannot use Gemini Free Tier on this hosting. You must switch back to OpenAI (GPT-4o).
+        """)
+    else:
+        st.success(f"✅ RESULT: Found {len(available_models)} models!")
+        st.info(f"Please copy one of the names above (e.g., `{available_models[0]}`) and use THAT EXACT NAME in your app.py.")
+
+        # --- 3. TEST GENERATION ---
+        st.subheader("Test Generation")
+        test_model_name = available_models[0].replace("models/", "")
+        st.write(f"Testing generation with: `{test_model_name}`...")
+        
+        model = genai.GenerativeModel(test_model_name)
+        response = model.generate_content("Hello, can you hear me?")
+        st.write(f"**Reply:** {response.text}")
+
+except Exception as e:
+    st.error(f"❌ CRITICAL ERROR: {e}")
+    st.write("This usually means the API Key is invalid OR the Server is completely blocked.")
