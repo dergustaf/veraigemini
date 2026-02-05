@@ -88,7 +88,7 @@ def get_gemini_response(user_input, chat_history):
 
     # 2. Configure the Gemini Model
     # 'gemini-1.5-flash' is fast and cheap. You can also use 'gemini-1.5-pro' for better reasoning.
-    model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel('gemini-pro')
 
     # 3. System Prompt (Gemini Instructions)
     system_instruction = f"""
